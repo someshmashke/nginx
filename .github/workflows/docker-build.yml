@@ -30,9 +30,10 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
 
-      # Add host key to known_hosts
-      - name: Add SSH host key
+      # Create .ssh directory and add host key to known_hosts
+      - name: Create SSH directory and add host key
         run: |
+          mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
 
       # Deployment Step: SSH into server and deploy
