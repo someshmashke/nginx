@@ -30,6 +30,11 @@ jobs:
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
 
+      # Add host key to known_hosts
+      - name: Add SSH host key
+        run: |
+          ssh-keyscan -H ${{ secrets.SERVER_IP }} >> ~/.ssh/known_hosts
+
       # Deployment Step: SSH into server and deploy
       - name: Deploy to Server via SSH
         uses: appleboy/ssh-action@v0.1.3
