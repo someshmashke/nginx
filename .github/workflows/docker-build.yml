@@ -40,10 +40,10 @@ jobs:
           username: ${{ secrets.SSH_USERNAME }} 
           password: ${{ secrets.SSH_PASSWORD }}
           script: 
-            docker pull namratathorve1/nginx-app:b67dcbd989312e79edb63914906ef7609f62d67c
+            docker pull ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
             docker stop nginx-app || true
             docker rm nginx-app || true
-            docker run -d --name nginx-app -p 8080:80 namratathorve1/nginx-app:b67dcbd989312e79edb63914906ef7609f62d67c
+            docker run -d --name nginx-app -p 8080:80 ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
 
 
 
