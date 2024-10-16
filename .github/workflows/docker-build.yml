@@ -39,6 +39,10 @@ jobs:
           port: ${{ secrets.PORT }}
           username: ${{ secrets.SSH_USERNAME }} 
           password: ${{ secrets.SSH_PASSWORD }}
-          script: whoami
+          script: 
+            docker pull ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
+            docker stop nginx-app || true
+            docker rm nginx-app || true
+            docker run -d --name nginx-app -p 80:80 ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
          
          
