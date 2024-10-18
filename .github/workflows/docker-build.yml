@@ -10,52 +10,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout code from the repo
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Set up Docker Buildx to build the image
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
-      # Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Build Docker Image
       - name: Build Docker Image
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }} .
 
-      # Push Docker Image to Docker Hub
       - name: Push Docker Image
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
 
       # Deployment Step: SSH into server and deploy
-      - name: SSH to server and deploy
+      - name: executing remote ssh commands using ssh key
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_IP }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
-          username: ${{ secrets.SSH_USERNAME }}
-          script: |
+          username: ${{ secrets.SSH_USERNAME }} 
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: 
             docker pull ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
             docker stop nginx-app || true
             docker rm nginx-app || true
             docker run -d --name nginx-app -p 8080:80 ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
-
-      # Optional: Cleanup old images
-      - name: Cleanup old Docker images
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: ${{ secrets.PORT }}
-          username: ${{ secrets.SSH_USERNAME }}
-          script: |
-            docker image prune -f
