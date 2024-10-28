@@ -31,16 +31,15 @@ jobs:
           docker push ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
 
       # Deployment Step: SSH into server and deploy
-      - name: executing remote ssh commands using ssh key
-        uses: appleboy/ssh-action@v1.0.3
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v0.1.9
         with:
           host: ${{ secrets.SERVER_IP }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.PORT }}
-          username: ${{ secrets.SSH_USERNAME }} 
-          password: ${{ secrets.SSH_PASSWORD }}
-          script: 
+          username: ${{ secrets.SSH_USERNAME }}
+          script: |
             docker pull ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
             docker stop nginx-app || true
             docker rm nginx-app || true
-            docker run -d --name nginx-app -p 8080:80 ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
+            docker run -d --name nginx-app --restart unless-stopped -p 8080:80 ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
