@@ -50,5 +50,5 @@ jobs:
           send \"sudo docker pull $DOCKER_USERNAME/nginx-app:$GITHUB_SHA && sudo docker stop nginx-app || true && sudo docker rm nginx-app || true && sudo docker run -d --name nginx-app --restart unless-stopped -p 8080:80 $DOCKER_USERNAME/nginx-app:$GITHUB_SHA\r\"
           expect \"$\"
           send \"exit\r\"
-          interact
+          interact 
           "
