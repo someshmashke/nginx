@@ -1,4 +1,4 @@
-name: Build and Push NGINX Docker Image
+name: Build, Save, and Transfer NGINX Docker Image
 
 on:
   push:
@@ -26,35 +26,40 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }} .
 
-      - name: Push Docker Image
+      - name: Save Docker Image as TAR
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
+          docker save -o nginx-app.tar ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
+
+      - name: Transfer Docker Image to VPS
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH }}
+          port: ${{ secrets.VPS_PORT }}
+          source: "nginx-app.tar"
+          target: "/tmp/nginx-app.tar"
 
       - name: Install Expect
         run: sudo apt-get install -y expect
 
-      - name: Deploy to Server
+      - name: Load and Deploy Docker Image on Server
         env:
-          SERVER_IP: ${{ secrets.SERVER_IP }}
-          SERVER_PORT: ${{ secrets.SERVER_PORT }}
-          SSH_USERNAME: ${{ secrets.SSH_USERNAME }}
-          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-          GITHUB_SHA: ${{ github.sha }}
+          SERVER_IP: ${{ secrets.VPS_HOST }}
+          PORT: ${{ secrets.VPS_PORT }}
+          SSH_USERNAME: ${{ secrets.VPS_USERNAME }}
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH }}
         run: |
           expect -c "
-          set timeout -1
-          spawn ssh -o StrictHostKeyChecking=no -p $SERVER_PORT $SSH_USERNAME@$SERVER_IP
-          expect \"password:\"
-          send \"$SSH_PASSWORD\r\"
+          spawn ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa -p $PORT $SSH_USERNAME@$SERVER_IP
           expect \"$ \"
-          send \"sudo docker pull $DOCKER_USERNAME/nginx-app:$GITHUB_SHA\r\"
+          send \"sudo docker load -i /tmp/nginx-app.tar\r\"
           expect \"$ \"
           send \"sudo docker stop nginx-app || true\r\"
           expect \"$ \"
           send \"sudo docker rm nginx-app || true\r\"
           expect \"$ \"
-          send \"sudo docker run -d --name nginx-app --restart unless-stopped -p 8080:80 $DOCKER_USERNAME/nginx-app:$GITHUB_SHA\r\"
+          send \"sudo docker run -d --name nginx-app --restart unless-stopped -p 8080:80 ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}\r\"
           expect \"$ \"
           send \"exit\r\"
           interact
