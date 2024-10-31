@@ -1,0 +1,29 @@
+#Create a test workflow file
+name: Test Secrets
+
+on: workflow_dispatch
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Secrets
+        run: |
+          if [ -n "${{ secrets.DOCKER_USERNAME }}" ]; then
+            echo "DOCKER_USERNAME is set"
+          fi
+          if [ -n "${{ secrets.DOCKER_PASSWORD }}" ]; then
+            echo "DOCKER_PASSWORD is set"
+          fi
+          if [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "SSH_PRIVATE_KEY is set"
+          fi
+          if [ -n "${{ secrets.SSH_KNOWN_HOSTS }}" ]; then
+            echo "SSH_KNOWN_HOSTS is set"
+          fi
+          if [ -n "${{ secrets.SSH_HOST }}" ]; then
+            echo "SSH_HOST is set"
+          fi
+          if [ -n "${{ secrets.SSH_USER }}" ]; then
+            echo "SSH_USER is set"
+          fi 
