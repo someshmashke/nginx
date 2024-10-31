@@ -1,4 +1,4 @@
-name: Build, Save, and Transfer NGINX Docker Image
+name: Build and Push NGINX Docker Image
 
 on:
   push:
@@ -26,41 +26,21 @@ jobs:
         run: |
           docker build -t ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }} .
 
-      - name: Save Docker Image as TAR
+      - name: Push Docker Image
         run: |
-          docker save -o nginx-app.tar ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
 
-      - name: Transfer Docker Image to VPS
-        uses: appleboy/scp-action@master
+      # Deployment Step: SSH into server and deploy
+      - name: executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USERNAME }}
-          key: ${{ secrets.VPS_SSH }}
-          port: ${{ secrets.VPS_PORT }}
-          source: "nginx-app.tar"
-          target: "/tmp/nginx-app.tar"
-
-      - name: Install Expect
-        run: sudo apt-get install -y expect
-
-      - name: Load and Deploy Docker Image on Server
-        env:
-          SERVER_IP: ${{ secrets.VPS_HOST }}
-          PORT: ${{ secrets.VPS_PORT }}
-          SSH_USERNAME: ${{ secrets.VPS_USERNAME }}
-          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH }}
-        run: |
-          expect -c "
-          spawn ssh -o StrictHostKeyChecking=no -i ~/.ssh/id_rsa -p $PORT $SSH_USERNAME@$SERVER_IP
-          expect \"$ \"
-          send \"sudo docker load -i /tmp/nginx-app.tar\r\"
-          expect \"$ \"
-          send \"sudo docker stop nginx-app || true\r\"
-          expect \"$ \"
-          send \"sudo docker rm nginx-app || true\r\"
-          expect \"$ \"
-          send \"sudo docker run -d --name nginx-app --restart unless-stopped -p 8080:80 ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}\r\"
-          expect \"$ \"
-          send \"exit\r\"
-          interact
-          "
+          host: ${{ secrets.SERVER_IP }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.PORT }}
+          username: ${{ secrets.SSH_USERNAME }} 
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: 
+            docker pull ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
+            docker stop nginx-app || true
+            docker rm nginx-app || true
+            docker run -d --name nginx-app -p 8080:80 ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
