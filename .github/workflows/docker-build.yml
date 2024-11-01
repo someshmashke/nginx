@@ -41,4 +41,4 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
             docker stop nginx-app || true
             docker rm nginx-app || true
-            docker run -d --name nginx-app -p 8080:80 ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
+            docker run -d --name nginx-app -p 8100:80 ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
