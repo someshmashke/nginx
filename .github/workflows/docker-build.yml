@@ -1,22 +1,20 @@
-name: Build, Push Docker Image, and Deploy
+name: Build and Push NGINX Docker Image
 
 on:
   push:
     branches:
-      - main  # Replace with your desired branch name
+      - main
 
 jobs:
-  build-and-publish:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: '14'  # Replace with the desired Node.js version
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
@@ -24,21 +22,23 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build Docker image
-        run: docker build -t ${{ secrets.DOCKER_USERNAME }}/bhfl-angular:latest .
-
-      - name: Push Docker image to Docker Hub
-        run: docker push ${{ secrets.DOCKER_USERNAME }}/bhfl-angular:latest
-
-      - name: Deploy Docker Image to Remote Server
-        uses: appleboy/ssh-action@master
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }} .
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
+      # Deployment Step: SSH into server and deploy
+      - name: executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
+          host: ${{ secrets.SERVER_IP }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: 22
-          script: |
-            docker stop bhfl-angular || true
-            docker rm bhfl-angular || true
-            docker pull ${{ secrets.DOCKER_USERNAME }}/bhfl-angular:latest
-            docker run -d --name bhfl-angular -p 80:80 ${{ secrets.DOCKER_USERNAME }}/bhfl-angular:latest
+          port: ${{ secrets.PORT }}
+          username: ${{ secrets.SSH_USERNAME }} 
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: 
+            docker pull ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
+            docker stop nginx-app || true
+            docker rm nginx-app || true
+            docker run -d --name nginx-app -p 8100:80 ${{ secrets.DOCKER_USERNAME }}/nginx-app:${{ github.sha }}
